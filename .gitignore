@@ -22,3 +22,5 @@ Thumbs.db
 build/
 dist/
 snag.spec
+
+demo.tape
