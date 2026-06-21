@@ -2,6 +2,7 @@ import os
 import platform
 import shutil
 import tarfile
+import time
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -41,9 +42,10 @@ def download_and_extract(url, dest_folder, target_name):
             with zipfile.ZipFile(archive_path, "r") as zip_ref:
                 for file in zip_ref.namelist():
                     if file.endswith(target_file):
-                        source = zip_ref.open(file)
-                        target_path = dest_folder / target_file
-                        with open(target_path, "wb") as target:
+                        with (
+                            zip_ref.open(file) as source,
+                            open(dest_folder / target_file, "wb") as target,
+                        ):
                             target.write(source.read())
                         break
 
@@ -56,9 +58,14 @@ def download_and_extract(url, dest_folder, target_name):
                         if source:
                             with open(target_path, "wb") as target:
                                 target.write(source.read())
+                            source.close()
                         break
 
-        os.remove(archive_path)
+        if IS_WINDOWS:
+            time.sleep(1)
+
+        if archive_path.exists():
+            os.remove(archive_path)
 
         if IS_LINUX:
             os.chmod(dest_folder / target_file, 0o755)
