@@ -1,3 +1,4 @@
+import os
 import re
 
 import questionary
@@ -5,10 +6,8 @@ import yt_dlp
 from rich.console import Console
 from rich.prompt import Prompt
 
+from installation import BIN_DIR, ensure_dependencies
 from options import get_ydl_opts
-
-import os
-from installation import ensure_dependencies, BIN_DIR
 
 console = Console()
 
@@ -29,30 +28,42 @@ def download_media(url, ydl_opts):
 
 
 def main():
-    console.print("\n[bold cyan]=== Snag CLI ===[/bold cyan]")
+    try:
+        ensure_dependencies()
+        os.environ["PATH"] += os.pathsep + str(BIN_DIR)
 
-    url = Prompt.ask("Paste the media URL here")
+        console.print("\n[bold cyan]=== Snag CLI ===[/bold cyan]")
 
-    if not url.strip():
-        console.print("[red]No URL provided. Exiting.[/red]")
-        return
+        url = Prompt.ask("Paste the media URL here")
 
-    format_choice = questionary.select(
-        "Select the format:", choices=["Video (MP4)", "Audio (MP3)"]
-    ).ask()
+        if not url.strip():
+            console.print("[red]No URL provided. Exiting.[/red]")
+            return
 
-    quality_choice = questionary.select(
-        "Select the quality:", choices=["High", "Medium", "Low"]
-    ).ask()
+        format_choice = questionary.select(
+            "Select the format:", choices=["Video (MP4)", "Audio (MP3)"]
+        ).ask()
 
-    opts = get_ydl_opts(format_choice, quality_choice)
+        quality_choice = questionary.select(
+            "Select the quality:", choices=["High", "Medium", "Low"]
+        ).ask()
 
-    download_media(url.strip(), opts)
+        opts = get_ydl_opts(format_choice, quality_choice)
+
+        download_media(url.strip(), opts)
+    except KeyboardInterrupt:
+        console.print("\n[red]Operation cancelled by user.[/red]")
+    except Exception as e:
+        console.print("\n[bold red]An unexpected error occurred.[/bold red]")
+        error_msg = str(e)
+        clean_msg = re.sub(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])", "", error_msg)
+        console.print(f"[red]{clean_msg}[/red]")
+    finally:
+        print("\n")
+        print("Press enter to quit...")
 
 
 if __name__ == "__main__":
-    ensure_dependencies()
-    os.environ["PATH"] += os.pathsep + str(BIN_DIR)
     main()
 
 # https://youtu.be/7PYUhpqM0cY?si=R_X-Ze0r9w5XmVd

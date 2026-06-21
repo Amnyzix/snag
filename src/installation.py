@@ -32,35 +32,40 @@ def download_and_extract(url, dest_folder, target_name):
     filename = url.split("/")[-1]
     archive_path = dest_folder / filename
 
-    urllib.request.urlretrieve(url, archive_path)
+    try:
+        urllib.request.urlretrieve(url, archive_path)
 
-    target_file = f"{target_name}{EXE_EXT}"
+        target_file = f"{target_name}{EXE_EXT}"
 
-    if filename.endswith(".zip"):
-        with zipfile.ZipFile(archive_path, "r") as zip_ref:
-            for file in zip_ref.namelist():
-                if file.endswith(target_file):
-                    source = zip_ref.open(file)
-                    target_path = dest_folder / target_file
-                    with open(target_path, "wb") as target:
-                        target.write(source.read())
-                    break
-
-    elif filename.endswith(".tar.xz"):
-        with tarfile.open(archive_path, "r:xz") as tar_ref:
-            for member in tar_ref.getmembers():
-                if member.name.endswith(target_file):
-                    source = tar_ref.extractfile(member)
-                    target_path = dest_folder / target_file
-                    if source:
+        if filename.endswith(".zip"):
+            with zipfile.ZipFile(archive_path, "r") as zip_ref:
+                for file in zip_ref.namelist():
+                    if file.endswith(target_file):
+                        source = zip_ref.open(file)
+                        target_path = dest_folder / target_file
                         with open(target_path, "wb") as target:
                             target.write(source.read())
-                    break
+                        break
 
-    os.remove(archive_path)
+        elif filename.endswith(".tar.xz"):
+            with tarfile.open(archive_path, "r:xz") as tar_ref:
+                for member in tar_ref.getmembers():
+                    if member.name.endswith(target_file):
+                        source = tar_ref.extractfile(member)
+                        target_path = dest_folder / target_file
+                        if source:
+                            with open(target_path, "wb") as target:
+                                target.write(source.read())
+                        break
 
-    if IS_LINUX:
-        os.chmod(dest_folder / target_file, 0o755)
+        os.remove(archive_path)
+
+        if IS_LINUX:
+            os.chmod(dest_folder / target_file, 0o755)
+    except Exception as e:
+        console.print(f"[red]Error downloading or extracting {target_name}: {e}[/red]")
+        if archive_path.exists():
+            os.remove(archive_path)
 
 
 def ensure_dependencies():
