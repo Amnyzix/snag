@@ -1,0 +1,74 @@
+name: Build and Release Snag
+
+# Déclenche le pipeline à chaque fois qu'un "tag" de version est créé (ex: v1.0.0)
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  compile:
+    name: Compile on ${{ matrix.os }}
+    # La matrice permet de lancer deux serveurs en parallèle
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            artifact_name: snag-linux
+          - os: windows-latest
+            artifact_name: snag-windows.exe
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # 1. Récupère le code de ton dépôt
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Installe Python sur le serveur virtuel
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # 3. Installe PyInstaller et les dépendances du projet
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install yt-dlp rich questionary pyinstaller
+
+      # 4. Compile le script en un exécutable unique
+      - name: Build with PyInstaller (Windows)
+        if: matrix.os == 'windows-latest'
+        run: pyinstaller --onefile --name snag src/main.py
+
+      # 5. Compile le script en un exécutable unique (Linux)
+      - name: Build with PyInstaller (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: pyinstaller --onefile --name snag src/main.py
+
+      # 6. Sauvegarde temporairement les fichiers créés
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/snag*
+
+  # Ce deuxième job s'exécute après la compilation pour publier les fichiers
+  release:
+    needs: compile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      # Crée une page "Release" officielle sur GitHub avec les deux exécutables
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            snag-linux/snag
+            snag-windows.exe/snag.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
