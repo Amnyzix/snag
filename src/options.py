@@ -7,6 +7,7 @@ def get_ydl_opts(format_choice, quality_choice):
         "outtmpl": "%(title)s.%(ext)s",
         "noplaylist": True,
         "js_runtimes": {"deno": {}},
+        "remote_components": ["ejs:github"],
     }
 
     # Video configuration

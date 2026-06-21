@@ -65,5 +65,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# https://youtu.be/7PYUhpqM0cY?si=R_X-Ze0r9w5XmVd
