@@ -35,26 +35,6 @@ snag
 2. **Select the format:** Choose between high-fidelity Video (MP4) or standalone Audio (MP3).
 3. **Select the quality:** Choose High, Medium, or Low to automatically balance resolution, bitrate, and file size.
 
-## Architecture & Development
-
-The codebase is split cleanly to ensure maintainability:
-
-- `src/main.py`: Interactive user interface, state handling, and runtime execution loop.
-- `src/options.py`: Automated routing engine transforming human choices into strict backend compiler dictionaries.
-- `src/installation.py`: Cross-platform binary dependency checker, safely extracting runtime components while avoiding race conditions or system file locks.
-
-### Local Compilation
-To compile the standalone binaries manually on your machine, install PyInstaller inside your virtual environment and execute:
-
-```bash
-pip install pyinstaller yt-dlp rich questionary
-pyinstaller --onefile --name snag src/main.py
-```
-
-## Continuous Integration (CI/CD)
-
-This repository contains an automated multi-stage GitHub Actions pipeline (`.github/workflows/build.yml`). Every time you push a version tag (`v*`), isolated Windows and Ubuntu runners spin up in parallel to compile native system binaries and automatically attach them to a fresh GitHub Release.
-
 ## License
 
 This project is open-source and available under the [MIT License](LICENSE).
