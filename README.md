@@ -1,11 +1,10 @@
 # Snag
 
-A lightweight, CLI media downloader based on `yt-dlp`.
+A lightweight CLI media downloader based on `yt-dlp`.
 
 <p align="center">
   <img src="demo.gif" alt="Snag CLI Demo" width="95%">
 </p>
-
 
 ## Installation
 
@@ -21,7 +20,7 @@ sudo curl -L "[https://github.com/Amnyzix/snag/releases/latest/download/snag](ht
 2. Move it to a folder of your choice (e.g., `C:\Tools`).
 3. Add that folder to your User/System **Environment Variables (PATH)** to run the command from any terminal session.
 
-> **Note on First Launch:** On its very first execution, `snag` will automatically download and provision its extraction engines (`deno` and `ffmpeg`) inside an isolated user directory (`~/.snag/bin`). This happens completely transparently and only occurs once.
+> **Note on First Launch:** On its very first execution, `snag` will automatically download and provision its standalone extraction engines (`yt-dlp`, `deno`, and `ffmpeg`) inside an isolated user directory (`~/.snag/bin`). This happens completely transparently and only occurs once.
 
 ## Usage
 
@@ -35,19 +34,26 @@ snag
 2. **Select the format:** Choose between high-fidelity Video (MP4) or standalone Audio (MP3).
 3. **Select the quality:** Choose High, Medium, or Low to automatically balance resolution, bitrate, and file size.
 
+### Updating Engines
+When platforms update their anti-bot protections or algorithms, you do not need to reinstall `snag`. Simply update the internal extraction engines directly from your terminal:
+
+```bash
+snag --update
+```
+
 ## Architecture & Development
 
 The codebase is split cleanly to ensure maintainability:
 
 - `src/main.py`: Interactive user interface, state handling, and runtime execution loop.
-- `src/options.py`: Automated routing engine transforming human choices into strict backend compiler dictionaries.
-- `src/installation.py`: Cross-platform binary dependency checker, safely extracting runtime components while avoiding race conditions or system file locks.
+- `src/options.py`: Automated routing engine transforming human choices into CLI arguments for `yt-dlp`.
+- `src/installation.py`: Cross-platform binary dependency manager, handling standalone engine provisioning and self-updates (`--update`) while avoiding system file locks.
 
 ### Local Compilation
 To compile the standalone binaries manually on your machine, install PyInstaller inside your virtual environment and execute:
 
 ```bash
-pip install pyinstaller yt-dlp rich questionary
+pip install pyinstaller rich questionary
 pyinstaller --onefile --name snag src/main.py
 ```
 
