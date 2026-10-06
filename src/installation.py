@@ -1,6 +1,7 @@
 import os
 import platform
 import shutil
+import subprocess
 import tarfile
 import time
 import urllib.request
@@ -23,19 +24,32 @@ EXE_EXT = ".exe" if IS_WINDOWS else ""
 if IS_WINDOWS:
     DENO_URL = "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-pc-windows-msvc.zip"
     FFMPEG_URL = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
+    YTDLP_URL = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe"
 elif IS_LINUX:
     DENO_URL = "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip"
     FFMPEG_URL = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"
+    YTDLP_URL = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux"
+
+
+def download_binary(url, dest_path):
+    """Download directly an executable (like yt-dlp)."""
+    try:
+        urllib.request.urlretrieve(url, dest_path)
+        if IS_LINUX:
+            os.chmod(dest_path, 0o755)
+    except Exception as e:
+        if dest_path.exists():
+            os.remove(dest_path)
+        raise RuntimeError(f"Error downloading {dest_path.name}: {str(e)}")
 
 
 def download_and_extract(url, dest_folder, target_name):
-    """Donwload archive, extract only executable wanted and clean up."""
+    """Download archive, extract only executable wanted and clean up."""
     filename = url.split("/")[-1]
     archive_path = dest_folder / filename
 
     try:
         urllib.request.urlretrieve(url, archive_path)
-
         target_file = f"{target_name}{EXE_EXT}"
 
         if filename.endswith(".zip"):
@@ -54,9 +68,8 @@ def download_and_extract(url, dest_folder, target_name):
                 for member in tar_ref.getmembers():
                     if member.name.endswith(target_file):
                         source = tar_ref.extractfile(member)
-                        target_path = dest_folder / target_file
                         if source:
-                            with open(target_path, "wb") as target:
+                            with open(dest_folder / target_file, "wb") as target:
                                 target.write(source.read())
                             source.close()
                         break
@@ -69,32 +82,64 @@ def download_and_extract(url, dest_folder, target_name):
 
         if IS_LINUX:
             os.chmod(dest_folder / target_file, 0o755)
+
     except Exception as e:
-        console.print(f"[red]Error downloading or extracting {target_name}: {e}[/red]")
-        if archive_path.exists():
-            os.remove(archive_path)
+        try:
+            if archive_path.exists():
+                os.remove(archive_path)
+        except:
+            pass
+        raise RuntimeError(f"Error downloading or extracting {target_name}: {str(e)}")
 
 
 def ensure_dependencies():
-    """Check dependencies and install them if missing."""
+    """Check and install yt-dlp, Deno and FFmpeg if necessary."""
     if not (IS_WINDOWS or IS_LINUX):
         console.print(
-            "[yellow]Unsupported OS for auto-install. Please install Deno and FFmpeg manually.[/yellow]"
+            "[yellow]Unsupported OS for auto-install. Please install yt-dlp, Deno,"
+            " and FFmpeg manually.[/yellow]"
         )
         return
 
     BIN_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Checking for Deno
+    # 1. Always maintain our own isolated yt-dlp in ~/.snag/bin
+    # to guarantee --update without sudo
+    ytdlp_exe = BIN_DIR / f"yt-dlp{EXE_EXT}"
+    if not ytdlp_exe.exists():
+        console.print("[yellow]Downloading core extraction engine (yt-dlp)...[/yellow]")
+        download_binary(YTDLP_URL, ytdlp_exe)
+
+    # 2. Check for Deno
     if not shutil.which("deno"):
         deno_exe = BIN_DIR / f"deno{EXE_EXT}"
         if not deno_exe.exists():
             console.print("[yellow]Downloading anti-blocking engine (Deno)...[/yellow]")
             download_and_extract(DENO_URL, BIN_DIR, "deno")
 
-    # Checking for FFmpeg
+    # 3. Check for FFmpeg
     if not shutil.which("ffmpeg"):
         ffmpeg_exe = BIN_DIR / f"ffmpeg{EXE_EXT}"
         if not ffmpeg_exe.exists():
             console.print("[yellow]Downloading audio/video engine (FFmpeg)...[/yellow]")
             download_and_extract(FFMPEG_URL, BIN_DIR, "ffmpeg")
+
+
+def update_engines():
+    """Update yt-dlp and Deno directly via their internal commands."""
+    ensure_dependencies()
+
+    ytdlp_exe = BIN_DIR / f"yt-dlp{EXE_EXT}"
+    deno_exe = BIN_DIR / f"deno{EXE_EXT}"
+
+    console.print("\n[bold cyan]Updating extraction engines...[/bold cyan]")
+
+    if ytdlp_exe.exists():
+        console.print("[yellow]Checking updates for yt-dlp...[/yellow]")
+        subprocess.run([str(ytdlp_exe), "-U"])
+
+    if deno_exe.exists():
+        console.print("\n[yellow]Checking updates for Deno...[/yellow]")
+        subprocess.run([str(deno_exe), "upgrade"])
+
+    console.print("\n[bold green]All engines are up to date![/bold green]")
